@@ -1,0 +1,9 @@
+*.bat text eol=crlf
+*.py text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.pt binary
+*.exe binary
+*.dll binary
+*.pdf binary

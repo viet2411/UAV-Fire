@@ -1,0 +1,10 @@
+# PyTorch (torch 2.11.0 + torchvision 0.26.0, CUDA 12.8) duoc cai rieng trong setup_windows.bat
+# tu https://download.pytorch.org/whl/cu128 - KHONG cai torch tu PyPI (ban CPU).
+ultralytics==8.4.163
+opencv-python>=4.10,!=4.13.0.90
+numpy>=2.0,<2.3
+dill==0.4.1
+lap>=0.5.12
+requests>=2.31
+fastapi>=0.110
+uvicorn>=0.29

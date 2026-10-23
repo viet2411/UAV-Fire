@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UAV School-Safety AI</title>
+<style>
+  :root {
+    --bg: #0b1017; --panel: #121a24; --panel2: #18222f; --line: #233142; --text: #e6edf5; --muted: #8a9bb0;
+    --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444; --info: #38bdf8; --off: #475569;
+    --fire: #f97316; --fall: #eab308; --fight: #e11d48; --crowd: #06b6d4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+
+  /* ---------- header */
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .logo { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #2563eb, #0ea5e9); font-weight: 800; }
+  .brand h1 { margin: 0; font-size: 16px; letter-spacing: .3px; }
+  .brand small { color: var(--muted); display: block; font-size: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+    background: var(--panel2); border: 1px solid var(--line); font-weight: 600; white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--off); }
+  .pill.ok .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .pill.bad { border-color: #7f1d1d; } .pill.bad .dot { background: var(--bad); animation: blink 1s infinite; }
+  .metrics { display: flex; gap: 8px; flex-wrap: wrap; }
+  .metric { padding: 4px 10px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line);
+    font-variant-numeric: tabular-nums; }
+  .metric b { font-size: 15px; } .metric span { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  .clock { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 74px; text-align: right; }
+  .btn { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2);
+    cursor: pointer; font-weight: 600; }
+  .btn:hover { border-color: #3b4f66; } .btn.on { background: #1e3a5f; border-color: #2563eb; }
+  .btn.rec.on { background: #7f1d1d; border-color: var(--bad); }
+
+  /* ---------- main */
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; padding: 14px; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .video-wrap { display: flex; flex-direction: column; min-height: 0; }
+  .video { position: relative; flex: 1; min-height: 0; background: #000; border-radius: 12px 12px 0 0;
+    overflow: hidden; display: grid; place-items: center; }
+  .video img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .badge { position: absolute; padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,.6);
+    font-weight: 700; font-size: 12px; letter-spacing: .4px; }
+  .b-src { top: 10px; left: 10px; } .b-rec { top: 10px; right: 10px; color: #fecaca; display: none; }
+  .b-rec::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
+    background: var(--bad); animation: blink 1s infinite; }
+  .lost { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.55);
+    font-size: 22px; font-weight: 800; color: #fecaca; text-align: center; }
+  .lost small { display: block; font-size: 14px; color: var(--muted); font-weight: 500; }
+  .alarm-flash { position: absolute; inset: 0; border: 6px solid var(--bad); border-radius: 12px; display: none;
+    pointer-events: none; animation: blink .6s infinite; }
+  .controls { display: flex; gap: 10px 18px; align-items: center; flex-wrap: wrap; padding: 10px 14px;
+    border-top: 1px solid var(--line); }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+  .slider { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .slider input { width: 110px; accent-color: #3b82f6; } .slider output { color: var(--text); min-width: 34px;
+    font-variant-numeric: tabular-nums; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: var(--muted); }
+  .switch input { display: none; }
+  .switch i { width: 34px; height: 19px; border-radius: 999px; background: var(--off); position: relative; transition: .2s; }
+  .switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%;
+    background: #fff; transition: .2s; }
+  .switch input:checked + i { background: #2563eb; } .switch input:checked + i::after { left: 17px; }
+
+  /* ---------- side */
+  aside { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .modules { display: grid; gap: 10px; }
+  .mod { padding: 12px 14px; display: grid; grid-template-columns: 38px 1fr auto; gap: 4px 12px; align-items: center;
+    border-left: 4px solid var(--ok); }
+  .mod .ic { grid-row: span 2; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    font-size: 20px; background: var(--panel2); }
+  .mod h3 { margin: 0; font-size: 14px; } .mod .sub { color: var(--muted); font-size: 12px; }
+  .state { font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: #14532d; color: #bbf7d0;
+    letter-spacing: .4px; text-align: center; }
+  .mod.alarm { border-left-color: var(--bad); background: #2a1215; }
+  .mod.alarm .state { background: var(--bad); color: #fff; animation: blink .8s infinite; }
+  .mod.warn { border-left-color: #f59e0b; background: #2a2112; }
+  .mod.warn .state { background: #f59e0b; color: #1a1205; }
+  .mod.hot { border-left-color: #fb923c; background: #2e1a0e; }
+  .mod.hot .state { background: #fb923c; color: #1a0c03; animation: blink 1.4s infinite; }
+  .meter { grid-column: 2 / 4; height: 6px; border-radius: 999px; background: #1f2b3a; overflow: hidden; margin-top: 4px; }
+  .meter b { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #f59e0b 70%, #fb923c); transition: width .4s; }
+  .crowd-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: none; align-items: center;
+    gap: 10px; padding: 8px 16px; border-radius: 10px; font-weight: 800; letter-spacing: .3px; white-space: nowrap;
+    background: rgba(245,158,11,.92); color: #1a1205; box-shadow: 0 4px 18px rgba(0,0,0,.4); }
+  .crowd-banner.hot { background: rgba(251,146,60,.95); animation: pulse 1.6s infinite; }
+  .crowd-banner small { font-weight: 600; opacity: .85; }
+  .metric.warn { border-color: #f59e0b; background: #2a2112; }
+  @keyframes pulse { 50% { transform: translateX(-50%) scale(1.04); } }
+  .mod.off { border-left-color: var(--off); opacity: .65; } .mod.off .state { background: #334155; color: #cbd5e1; }
+  .mod.na { opacity: .4; }
+  .feed { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .feed-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
+    border-bottom: 1px solid var(--line); }
+  .feed-h h2 { margin: 0; font-size: 14px; } .feed-h span { color: var(--muted); font-size: 12px; }
+  .list { overflow-y: auto; flex: 1; }
+  .empty { color: var(--muted); padding: 24px; text-align: center; }
+  .item { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .item.new { animation: newin 1.2s; }
+  .thumb { width: 96px; height: 54px; border-radius: 6px; object-fit: cover; background: #000; cursor: zoom-in;
+    border: 1px solid var(--line); }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 5px; font-size: 11px; font-weight: 800; color: #fff;
+    letter-spacing: .3px; }
+  .chip.fire { background: var(--fire); } .chip.crowd { background: var(--crowd); color: #062a30; } .chip.fall { background: var(--fall); color: #1a1a1a; } .chip.fight { background: var(--fight); }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .vbtns { display: flex; gap: 6px; margin-top: 6px; }
+  .vbtn { padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2);
+    cursor: pointer; font-size: 12px; font-weight: 600; }
+  .vbtn.ok.sel { background: #14532d; border-color: var(--ok); } .vbtn.bad.sel { background: #7f1d1d; border-color: var(--bad); }
+
+  /* ---------- footer timeline */
+  footer { padding: 0 14px 14px; }
+  .timeline { padding: 10px 14px; }
+  .tl-h { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 6px; gap: 12px; flex-wrap: wrap; }
+  .legend span { margin-left: 12px; } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 5px; vertical-align: -1px; }
+  canvas { width: 100%; height: 74px; display: block; }
+
+  /* ---------- modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: none; place-items: center; z-index: 10; padding: 20px; }
+  .modal.show { display: grid; }
+  .modal .box { max-width: 1000px; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .modal .box-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .modal .media { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
+  .modal img, .modal video { width: 100%; border-radius: 8px; background: #000; }
+  .modal .cap { color: var(--muted); font-size: 12px; margin: 4px 2px 0; }
+
+  @keyframes blink { 50% { opacity: .35; } }
+  @keyframes newin { from { background: #3b1219; } to { background: transparent; } }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; overflow-y: auto; } .app { height: auto; min-height: 100vh; }
+    .video { aspect-ratio: 16/9; flex: none; } .list { max-height: 60vh; } .modal .media { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">AI</div>
+      <div><h1>UAV SCHOOL-SAFETY AI</h1><small>Giám sát an toàn trường học bằng UAV</small></div>
+    </div>
+    <div class="pill" id="conn"><span class="dot"></span><span id="connText">Đang kết nối…</span></div>
+    <div class="metrics">
+      <div class="metric" id="mPeopleBox" title="Số người trong khung · nhóm lớn nhất"><b id="mPeople">–</b><span>người</span></div>
+      <div class="metric"><b id="mFps">–</b><span>fps AI</span></div>
+      <div class="metric"><b id="mLat">–</b><span>ms/khung</span></div>
+      <div class="metric"><b id="mUp">–</b><span>thời gian</span></div>
+      <div class="metric" id="mGpu" title="Thiết bị xử lý">–</div>
+    </div>
+    <button class="btn" id="soundBtn" title="Bật âm thanh cảnh báo">🔇 Âm thanh</button>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <main>
+    <section class="card video-wrap">
+      <div class="video">
+        <img id="video" alt="Video trực tiếp từ UAV">
+        <div class="badge b-src" id="srcBadge">NGUỒN</div>
+        <div class="badge b-rec" id="recBadge">ĐANG GHI</div>
+        <div class="crowd-banner" id="crowdBanner">👥 <span id="crowdText"></span></div>
+        <div class="lost" id="lost"><div>⚠ MẤT TÍN HIỆU UAV<small id="lostText">đang chờ kết nối lại…</small></div></div>
+        <div class="alarm-flash" id="flash"></div>
+      </div>
+      <div class="controls">
+        <button class="btn rec" id="recBtn">● Ghi hình</button>
+        <button class="btn" id="snapBtn">📷 Chụp ảnh</button>
+        <div class="sep"></div>
+        <label class="switch"><input type="checkbox" id="ovBoxes"><i></i>Khung</label>
+        <label class="switch"><input type="checkbox" id="ovSkel"><i></i>Skeleton</label>
+        <div class="sep"></div>
+        <label class="slider" title="Độ tin cậy tối thiểu để tính là đánh nhau">Đánh nhau
+          <input type="range" id="thFight" min="0.3" max="0.9" step="0.05"><output id="oFight"></output></label>
+        <label class="slider" title="Tỉ lệ thời gian có người nằm trong 4 giây để báo ngã">Ngã
+          <input type="range" id="thFall" min="0.2" max="0.9" step="0.05"><output id="oFall"></output></label>
+        <label class="slider" title="Độ tin cậy tối thiểu cho cháy/khói">Cháy
+          <input type="range" id="thFire" min="0.2" max="0.9" step="0.05"><output id="oFire"></output></label>
+        <label class="slider" title="Cảnh báo khi một nhóm có từ N người trở lên tụ tập vài giây">Đám đông ≥
+          <input type="range" id="thCrowd" min="2" max="20" step="1"><output id="oCrowd"></output></label>
+        <label class="slider" title="Số giây tối thiểu giữa 2 cảnh báo cùng loại">Chờ
+          <input type="range" id="cool" min="5" max="60" step="5"><output id="oCool"></output></label>
+      </div>
+    </section>
+
+    <aside>
+      <div class="modules" id="modules"></div>
+      <section class="card feed">
+        <div class="feed-h"><h2>Nhật ký cảnh báo</h2><span id="feedCount">0 sự kiện</span></div>
+        <div class="list" id="list"><div class="empty">Chưa có cảnh báo nào</div></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <section class="card timeline">
+      <div class="tl-h">
+        <span>Dòng thời gian phiên giám sát</span>
+        <span class="legend"><span><i style="background:var(--fight)"></i>Đánh nhau</span><span><i style="background:var(--fall)"></i>Người ngã</span><span><i style="background:var(--fire)"></i>Cháy / khói</span><span><i style="background:rgba(245,158,11,.6)"></i>Giai đoạn tụ tập</span><span><i style="background:#64748b"></i>Số người</span></span>
+        <span id="precision"></span>
+      </div>
+      <canvas id="tl"></canvas>
+    </section>
+  </footer>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <div class="box-h"><b id="mTitle"></b><button class="btn" id="mClose">Đóng ✕</button></div>
+    <div class="media">
+      <div><img id="mImg" alt=""><div class="cap">Ảnh lúc cảnh báo</div></div>
+      <div id="mClipWrap"><div class="cap" id="mClipCap"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOD = {
+  fire:  { name: "Cháy / Khói", icon: "🔥", label: "CHÁY / KHÓI", unit: v => `độ tin cậy ${v.toFixed(2)}` },
+  fall:  { name: "Người ngã",   icon: "🧍", label: "NGƯỜI NGÃ",   unit: v => `nằm ${v.toFixed(1)} s / 4 s` },
+  fight: { name: "Đánh nhau",   icon: "🥊", label: "ĐÁNH NHAU",   unit: v => `độ tin cậy ${v.toFixed(2)}` },
+  crowd: { name: "Tụ tập đông người", icon: "👥", label: "ĐÁM ĐÔNG",
+           unit: v => `nhóm lớn nhất ${v|0} · tổng ${S.status.people} người · ngưỡng ≥ ${S.cfg.thresholds.crowd_min}` +
+                      (S.status.crowd.active ? ` · đã ${fmtDur(S.status.crowd.since_s)}` : "") },
+};
+const $ = id => document.getElementById(id);
+let crowdWas = false;
+let S = null, lastAlertId = 0, sound = false, audio = null, feedSig = "", cfgInit = false, flashUntil = 0;
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} :
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.json();
+}
+const fmtDur = s => { s = Math.max(0, s|0); const h = s/3600|0, m = (s%3600)/60|0, x = s%60;
+  return (h ? h + ":" : "") + String(m).padStart(h ? 2 : 1, "0") + ":" + String(x).padStart(2, "0"); };
+
+/* ---------- video (MJPEG, tự nối lại) */
+function startVideo() { $("video").src = "/video.mjpg?" + Date.now(); }
+$("video").onerror = () => setTimeout(startVideo, 2000);
+startVideo();
+
+/* ---------- âm thanh */
+$("soundBtn").onclick = () => {
+  sound = !sound; $("soundBtn").textContent = sound ? "🔊 Âm thanh" : "🔇 Âm thanh";
+  $("soundBtn").classList.toggle("on", sound);
+  if (sound && !audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+  if (sound) beep("fall");
+};
+function beep(kind) {
+  if (!sound || !audio) return;
+  const pat = { fight: [880, 660, 880, 660], fall: [740, 740], fire: [1000, 800, 1000], crowd: [520, 620, 720] }[kind] || [800];
+  pat.forEach((f, i) => { const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = f; o.type = "square"; g.gain.value = .08; o.connect(g); g.connect(audio.destination);
+    const t = audio.currentTime + i * 0.22; o.start(t); o.stop(t + 0.18); });
+}
+
+function chime() {   // chuông nhẹ cho TRẠNG THÁI tụ tập (khác chuông báo động sự cố)
+  if (!sound || !audio) return;
+  [660, 880].forEach((f, i) => { const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * .25;
+    o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .6);
+    o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + .6); });
+}
+
+/* ---------- module cards */
+function renderModules() {
+  const box = $("modules"); box.innerHTML = "";
+  for (const k of ["fight", "fall", "crowd", "fire"]) {
+    const m = S.modules[k], avail = S.available[k], on = S.cfg.modules[k], st = S.stats[k], cr = S.status.crowd;
+    let state;
+    if (!avail) state = "na"; else if (!on) state = "off";
+    else if (k === "crowd") state = !cr.active ? "ok" : cr.level === "rat_dong" ? "hot" : "warn";
+    else state = (m.state === "alarm" || (m.last_alert && lastAlertAge(k) < 10)) ? "alarm" : "ok";
+    const txt = { na: "CHƯA NẠP", off: "TẮT", alarm: "CẢNH BÁO", ok: "BÌNH THƯỜNG", warn: "ĐANG TỤ TẬP", hot: "RẤT ĐÔNG" }[state];
+    const prec = !st ? "" : (st.precision === null ? "" : ` · đúng ${Math.round(st.precision*100)}%`);
+    const count = st ? ` · ${st.total} cảnh báo` : "";
+    const el = document.createElement("div");
+    el.className = `card mod ${state}`;
+    el.innerHTML = `<div class="ic">${MOD[k].icon}</div>
+      <h3>${MOD[k].name}</h3>
+      <label class="switch" title="${avail ? "Bật/tắt module" : "Chưa có mô hình"}"><input type="checkbox" ${on ? "checked" : ""} ${avail ? "" : "disabled"}><i></i></label>
+      <div class="sub">${avail ? (on ? MOD[k].unit(m.value) : "đã tắt") : "chưa nạp mô hình (--fire-weights)"}${count}${prec}</div>
+      <div class="state">${txt}</div>` +
+      (k === "crowd" && on ? `<div class="meter" title="Nhóm lớn nhất so với ngưỡng"><b style="width:${Math.min(100, cr.largest / cr.threshold * 100)}%"></b></div>` : "");
+    el.querySelector("input").onchange = e => api("/api/config", { modules: { [k]: e.target.checked } });
+    box.appendChild(el);
+  }
+}
+function lastAlertAge(k) {
+  const a = [...S.alerts].reverse().find(x => x.key === k);
+  return a ? (S.status.uptime_s - a.t) : 1e9;
+}
+
+/* ---------- feed */
+function renderFeed() {
+  const sig = JSON.stringify(S.alerts.map(a => [a.id, a.verdict, a.clip]));
+  $("feedCount").textContent = `${S.alerts.length} sự kiện`;
+  if (sig === feedSig) return;
+  feedSig = sig;
+  const list = $("list");
+  if (!S.alerts.length) { list.innerHTML = '<div class="empty">Chưa có cảnh báo nào</div>'; return; }
+  list.innerHTML = "";
+  for (const a of [...S.alerts].reverse()) {
+    const el = document.createElement("div");
+    el.className = "item" + (a.id > lastAlertId - 1 && a.id === S.alerts.length ? " new" : "");
+    el.innerHTML = `<img class="thumb" src="${a.snapshot || ""}" alt="">
+      <div><span class="chip ${a.key}">${MOD[a.key].label}</span> <b>#${a.id}</b>
+        <div class="meta">${a.time.slice(11)} · ${a.detail.replace("do_tin_cay=", "tin cậy ").replace("thoi_gian_nam=", "nằm ").replace("nhom=", "nhóm ").replace("tong=", "tổng ").replace(/nguoi/g, "người")}${a.clip ? " · 🎞 có clip" : ""}</div>
+        <div class="vbtns">
+          <button class="vbtn ok ${a.verdict === "dung" ? "sel" : ""}">✔ Đúng</button>
+          <button class="vbtn bad ${a.verdict === "nham" ? "sel" : ""}">✖ Báo nhầm</button>
+        </div></div>`;
+    el.querySelector(".thumb").onclick = () => openModal(a);
+    const [bOk, bBad] = el.querySelectorAll(".vbtn");
+    bOk.onclick = () => verdict(a, "dung"); bBad.onclick = () => verdict(a, "nham");
+    list.appendChild(el);
+  }
+}
+async function verdict(a, v) { await api(`/api/alerts/${a.id}/verdict`, { verdict: a.verdict === v ? null : v }); poll(); }
+
+/* ---------- modal */
+function openModal(a) {
+  $("mTitle").textContent = `#${a.id} · ${MOD[a.key].label} · ${a.time}`;
+  $("mImg").src = a.snapshot || "";
+  const w = $("mClipWrap");
+  if (a.clip && a.clip.endsWith(".webm"))
+    w.innerHTML = `<video src="${a.clip}" controls autoplay loop muted></video><div class="cap">Clip 5 s trước → 5 s sau cảnh báo</div>`;
+  else if (a.clip) w.innerHTML = `<div class="cap"><a href="${a.clip}" style="color:var(--info)">Tải clip (.avi)</a></div>`;
+  else w.innerHTML = `<div class="cap">Clip đang được ghi (5 s sau cảnh báo)…</div>`;
+  $("modal").classList.add("show");
+}
+$("mClose").onclick = () => { $("modal").classList.remove("show"); $("mClipWrap").innerHTML = ""; };
+$("modal").onclick = e => { if (e.target.id === "modal") $("mClose").onclick(); };
+
+/* ---------- timeline */
+function renderTimeline() {
+  const c = $("tl"), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+  c.width = W * dpr; c.height = H * dpr;
+  const g = c.getContext("2d"); g.scale(dpr, dpr);
+  g.fillStyle = "#0f1620"; g.fillRect(0, 0, W, H);
+  const T = Math.max(60, S.status.uptime_s);
+  g.fillStyle = "#5b6b80"; g.font = "11px system-ui";
+  const step = T > 1800 ? 600 : T > 600 ? 120 : T > 180 ? 60 : 15;
+  for (let s = 0; s <= T; s += step) { const x = s / T * (W - 2) + 1;
+    g.fillRect(x, H - 6, 1, 6); g.fillText(fmtDur(s), Math.min(x + 3, W - 34), H - 8); }
+  const hist = S.people_hist || [], pmax = Math.max(4, ...hist.map(h => h[1]));
+  g.fillStyle = "rgba(245,158,11,.28)";
+  for (let i = 0; i < hist.length; i++) if (hist[i][2]) {
+    const x0 = hist[i][0] / T * (W - 2) + 1, x1 = (i + 1 < hist.length ? hist[i + 1][0] : S.status.uptime_s) / T * (W - 2) + 1;
+    g.fillRect(x0, 0, Math.max(2, x1 - x0), H - 14); }
+  g.strokeStyle = "#94a3b8"; g.lineWidth = 1.5; g.fillStyle = "rgba(148,163,184,.22)"; g.beginPath();
+  const base = H - 14, top = 40;
+  hist.forEach(([t, n], i) => { const x = t / T * (W - 2) + 1, y = base - n / pmax * (base - top);
+    i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  if (hist.length) { g.stroke(); g.lineTo(hist[hist.length-1][0] / T * (W - 2) + 1, base); g.lineTo(hist[0][0] / T * (W - 2) + 1, base); g.fill();
+    g.fillStyle = "#94a3b8"; g.fillText(`max ${pmax} người`, 4, top - 2); }
+  const col = { fire: "#f97316", fall: "#eab308", fight: "#e11d48", crowd: "#06b6d4" },
+        row = { fight: 2, fall: 11, fire: 20 };
+  for (const a of S.alerts) { const x = a.t / T * (W - 2) + 1;
+    g.fillStyle = col[a.key]; g.fillRect(x - 2, row[a.key], 5, 8);
+    if (a.verdict === "nham") { g.fillStyle = "#0f1620"; g.fillRect(x - 1, row[a.key] + 2, 3, 4); } }
+  g.fillStyle = "#38bdf8"; g.fillRect(W - 2, 0, 2, H - 6);
+}
+
+/* ---------- config controls */
+function initControls() {
+  const c = S.cfg;
+  $("ovBoxes").checked = c.overlays.boxes; $("ovSkel").checked = c.overlays.skeleton;
+  const sl = [["thFight", "oFight", "fight_conf"], ["thFall", "oFall", "lying_ratio"], ["thFire", "oFire", "fire_conf"]];
+  for (const [i, o, k] of sl) {
+    $(i).value = c.thresholds[k]; $(o).textContent = (+c.thresholds[k]).toFixed(2);
+    $(i).oninput = e => $(o).textContent = (+e.target.value).toFixed(2);
+    $(i).onchange = e => api("/api/config", { thresholds: { [k]: +e.target.value } });
+  }
+  $("thCrowd").value = c.thresholds.crowd_min; $("oCrowd").textContent = c.thresholds.crowd_min;
+  $("thCrowd").oninput = e => $("oCrowd").textContent = e.target.value;
+  $("thCrowd").onchange = e => api("/api/config", { thresholds: { crowd_min: +e.target.value } });
+  $("thFire").disabled = !S.available.fire;
+  $("cool").value = c.cooldown; $("oCool").textContent = c.cooldown + "s";
+  $("cool").oninput = e => $("oCool").textContent = e.target.value + "s";
+  $("cool").onchange = e => api("/api/config", { cooldown: +e.target.value });
+  $("ovBoxes").onchange = e => api("/api/config", { overlays: { boxes: e.target.checked } });
+  $("ovSkel").onchange = e => api("/api/config", { overlays: { skeleton: e.target.checked } });
+  cfgInit = true;
+}
+$("recBtn").onclick = () => api("/api/record", { on: !S.status.recording }).then(() => setTimeout(poll, 300));
+$("snapBtn").onclick = async () => {
+  const r = await api("/api/snapshot", {});
+  if (r.url) window.open(r.url, "_blank");
+};
+
+/* ---------- header / status */
+function renderStatus() {
+  const st = S.status, conn = $("conn");
+  conn.className = "pill " + (st.ended ? "" : st.connected ? "ok" : "bad");
+  $("connText").textContent = st.ended ? "ĐÃ HẾT VIDEO" : st.connected ? "UAV ĐÃ KẾT NỐI" : `MẤT TÍN HIỆU ${st.lost_s|0}s`;
+  $("lost").style.display = (!st.connected && !st.ended && st.frames > 0) ? "grid" : "none";
+  $("lostText").textContent = `${st.lost_s|0} giây · đang chờ kết nối lại…`;
+  $("mPeople").textContent = st.frames ? `${st.people}` + (st.largest_group > 1 ? ` · nhóm ${st.largest_group}` : "") : "–";
+  const cr = st.crowd, cOn = cr.active && S.cfg.modules.crowd;
+  $("mPeopleBox").classList.toggle("warn", cOn);
+  $("crowdBanner").style.display = cOn ? "flex" : "none";
+  $("crowdBanner").classList.toggle("hot", cr.level === "rat_dong");
+  $("crowdText").innerHTML = `${cr.level === "rat_dong" ? "RẤT ĐÔNG NGƯỜI" : "ĐANG TỤ TẬP ĐÔNG NGƯỜI"} · nhóm ${cr.largest} người <small>(đông nhất ${cr.peak}) · ${fmtDur(cr.since_s)}</small>`;
+  if (cOn && !crowdWas) chime(); crowdWas = cOn;
+  $("mFps").textContent = st.ai_fps ? st.ai_fps.toFixed(0) : "–";
+  $("mLat").textContent = st.latency_ms ? st.latency_ms.toFixed(0) : "–";
+  $("mUp").textContent = fmtDur(st.uptime_s);
+  $("mGpu").textContent = st.gpu;
+  const src = st.source.startsWith("rtp://") ? "RTP · Aviateur" : st.source.startsWith("http") ? "HTTP · fpv4win" :
+              st.mode === "file" ? "FILE · " + st.source.split(/[\\/]/).pop() : st.source;
+  $("srcBadge").textContent = `${src} · ${st.src_fps} fps`;
+  $("recBadge").style.display = st.recording ? "block" : "none";
+  $("recBtn").classList.toggle("on", st.recording);
+  $("recBtn").textContent = st.recording ? "■ Dừng ghi" : "● Ghi hình";
+  const all = Object.values(S.stats).reduce((a, s) => [a[0] + s.dung, a[1] + s.nham], [0, 0]);
+  $("precision").textContent = all[0] + all[1] ? `Đã xác nhận: ${all[0]} đúng · ${all[1]} báo nhầm (${Math.round(all[0]/(all[0]+all[1])*100)}% đúng)` : "Chưa xác nhận cảnh báo nào";
+}
+
+/* ---------- loop */
+async function poll() {
+  try { S = await api("/api/state"); } catch { $("connText").textContent = "MẤT KẾT NỐI MÁY CHỦ"; $("conn").className = "pill bad"; return; }
+  if (!cfgInit) { initControls(); lastAlertId = S.alerts.length ? S.alerts[S.alerts.length - 1].id : 0; }
+  const fresh = S.alerts.filter(a => a.id > lastAlertId);
+  if (fresh.length) { lastAlertId = fresh[fresh.length - 1].id; beep(fresh[fresh.length - 1].key); flashUntil = Date.now() + 3000; }
+  $("flash").style.display = Date.now() < flashUntil ? "block" : "none";
+  renderStatus(); renderModules(); renderFeed(); renderTimeline();
+}
+setInterval(poll, 500); poll();
+setInterval(() => $("clock").textContent = new Date().toLocaleTimeString("vi-VN", { hour12: false }), 500);
+window.addEventListener("resize", () => S && renderTimeline());
+</script>
+</body>
+</html>

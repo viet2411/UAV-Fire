@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn nhanh UAV</title>
+<style>
+  :root { --ink: #0f172a; --muted: #475569; --line: #e2e8f0; --bg: #ffffff; --soft: #f8fafc;
+    --blue: #1d4ed8; --green: #15803d; --red: #b91c1c; --amber: #b45309; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--soft); color: var(--ink);
+    font: 15px/1.55 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+  .page { max-width: 860px; margin: 0 auto; padding: 24px 20px 48px; background: var(--bg); }
+  header { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--blue); padding-bottom: 12px; }
+  .logo { width: 44px; height: 44px; border-radius: 10px; background: var(--blue); color: #fff; display: grid;
+    place-items: center; font-weight: 800; flex: none; }
+  h1 { font-size: 22px; margin: 0; } header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .printbtn { margin-left: auto; padding: 7px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+    cursor: pointer; font: inherit; font-weight: 600; }
+  h2 { font-size: 17px; margin: 26px 0 10px; display: flex; align-items: center; gap: 10px; }
+  h2 .tag { font-size: 12px; font-weight: 700; color: #fff; padding: 2px 9px; border-radius: 999px; }
+  .t-pre { background: var(--muted); } .t-field { background: var(--blue); } .t-fly { background: var(--green); }
+  .t-alert { background: var(--red); } .t-end { background: #334155; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 10px 12px 10px 52px; border: 1px solid var(--line);
+    border-radius: 10px; margin-bottom: 8px; background: #fff; break-inside: avoid; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 12px; top: 10px; width: 28px; height: 28px;
+    border-radius: 50%; background: var(--blue); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 14px; }
+  .pre ol.steps > li::before { background: var(--muted); } .fly ol.steps > li::before { background: var(--green); }
+  .alert ol.steps > li::before { background: var(--red); } .end ol.steps > li::before { background: #334155; }
+  b.k { font-weight: 700; } code, kbd { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px;
+    background: #eef2ff; border: 1px solid #c7d2fe; padding: 0 5px; border-radius: 5px; }
+  .ok { color: var(--green); font-weight: 700; } .warn { color: var(--amber); font-weight: 700; } .bad { color: var(--red); font-weight: 700; }
+  .box { border-left: 4px solid var(--amber); background: #fffbeb; padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; }
+  .box.safe { border-color: var(--red); background: #fef2f2; }
+  .choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .choice div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--soft); }
+  .choice h4 { margin: 0 0 4px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-size: 13px; color: var(--muted); }
+  .check { list-style: none; padding: 0; columns: 2; column-gap: 24px; margin: 0; }
+  .check li { padding-left: 24px; position: relative; margin-bottom: 4px; break-inside: avoid; }
+  .check li::before { content: "☐"; position: absolute; left: 0; top: -1px; font-size: 16px; }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  @media (max-width: 640px) { .choice { grid-template-columns: 1fr; } .check { columns: 1; } }
+  @media print {
+    body { background: #fff; font-size: 12.5px; } .page { padding: 0; max-width: none; } .printbtn { display: none; }
+    h2 { margin-top: 14px; } ol.steps > li { padding: 6px 10px 6px 46px; margin-bottom: 5px; }
+    ol.steps > li::before { width: 24px; height: 24px; top: 6px; }
+    @page { size: A4; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <div class="logo">AI</div>
+  <div><h1>Hướng dẫn nhanh: bay UAV &amp; khởi động phần mềm giám sát</h1>
+    <p>UAV School-Safety AI · thư mục <code>C:\UAV-Fire</code> · đã chạy <code>setup_windows.bat</code> thành công</p></div>
+  <button class="printbtn" onclick="window.print()">🖨 In</button>
+</header>
+
+<section class="pre">
+<h2><span class="tag t-pre">TRƯỚC KHI RA SÂN</span> Chuẩn bị</h2>
+<ul class="check">
+  <li>Pin UAV, pin tay điều khiển đã sạc đầy (mang pin dự phòng)</li>
+  <li>Laptop đã sạc, <b class="k">cắm sạc</b> khi chạy (AI dùng GPU, tốn pin)</li>
+  <li>Card thu WiFi <b class="k">RTL8812AU</b> + ăng-ten</li>
+  <li>Đã có phần mềm thu hình: <b class="k">Aviateur</b> (≥ v0.3.3) hoặc <b class="k">fpv4win</b></li>
+  <li>(Làm 1 lần) Card thu đã cài driver <b class="k">libusb</b> bằng Zadig (<code>tools\zadig-2.8.exe</code>): <i>Options → List All Devices</i> → chọn card → <b>libusb</b> → Install</li>
+  <li>Đã xin phép nhà trường; chọn giờ / khu vực bay an toàn</li>
+  <li>Muốn nhận cảnh báo Telegram: laptop cần có Internet (WiFi / 4G)</li>
+</ul>
+<div class="box">Tắt chế độ ngủ của laptop khi chạy lâu: <i>Settings → System → Power → Screen and sleep → Never</i>.</div>
+</section>
+
+<section>
+<h2><span class="tag t-field">TẠI SÂN</span> Khởi động (khoảng 3 phút)</h2>
+<ol class="steps">
+  <li><b class="k">Cắm card thu RTL8812AU</b> vào cổng USB của laptop, gắn ăng-ten.</li>
+  <li><b class="k">Bật UAV</b>, đặt trên mặt phẳng, cách người ≥ 5 m. Chờ ~30 giây cho camera khởi động.</li>
+  <li><b class="k">Mở phần mềm thu hình</b> và cho nó gửi hình sang phần mềm AI:
+    <div class="choice">
+      <div><h4>Dùng Aviateur</h4>Chọn card thu → đánh dấu ô <b>Forward RTP</b> → ô <b>target port</b> nhập <code>5600</code>
+        → bấm <b>Start (F5)</b>.<br><span class="warn">Khi Forward RTP bật, Aviateur không tự hiện hình</span> — hình sẽ hiện ở phần mềm AI (bước 5).</div>
+      <div><h4>Dùng fpv4win</h4>Chờ có hình → bấm <b>Start Stream</b>. <b>Tắt VLC</b> nếu đang mở.</div>
+    </div></li>
+  <li><b class="k">Nhấp đúp</b> trong <code>C:\UAV-Fire</code>:
+    <div class="choice">
+      <div><h4>Aviateur</h4><code>start.bat</code></div>
+      <div><h4>fpv4win</h4><code>start_fpv4win.bat</code></div>
+    </div>
+    Một cửa sổ đen hiện ra (<b>không tắt</b> cửa sổ này). Chờ ~10 giây.</li>
+  <li>Tự mở <b class="k">cửa sổ video</b> + <b class="k">trình duyệt</b> (màn hình giám sát <code>http://localhost:8000</code>).
+    Kiểm tra thanh trên cùng: <span class="ok">● UAV ĐÃ KẾT NỐI</span> và <b>fps AI ≥ 20</b>.</li>
+  <li>Bấm nút <b class="k">🔇 Âm thanh</b> trên màn hình giám sát để bật chuông cảnh báo.</li>
+  <li>(Tuỳ chọn) Trên điện thoại: nhắn <code>/trangthai</code> cho bot Telegram → bot trả lời là hệ thống đang chạy.
+    Người khác muốn xem: mở <code>http://&lt;IP laptop&gt;:8000</code> (IP in ở dòng <code>[WEB]</code> trong cửa sổ đen).</li>
+</ol>
+</section>
+
+<section class="fly">
+<h2><span class="tag t-fly">BAY</span> Giám sát</h2>
+<ol class="steps">
+  <li><b class="k">Cất cánh</b>, lên độ cao <b>10–15 m</b>, camera chếch nhìn xuống sân.</li>
+  <li>Chỉnh độ cao sao cho <b>một người cao khoảng 1/6 chiều cao màn hình</b> (≈ 120–150 px): đủ to để AI nhận ra tư thế.
+    Người quá nhỏ → hạ thấp dần.</li>
+  <li><b class="k">Bay chậm</b>, dừng (hover) vài giây ở từng khu vực: sân, cổng, hành lang, căng tin.</li>
+  <li>Theo dõi màn hình giám sát hoặc cửa sổ video. Không cần bấm gì khi mọi thứ <span class="ok">BÌNH THƯỜNG</span>.</li>
+</ol>
+<div class="box safe"><b>An toàn bay:</b> không bay ngay trên đầu học sinh · luôn nhìn thấy UAV · có 1 người quan sát xung quanh ·
+  hạ cánh khi pin còn ~30 % · tuân thủ quy định của nhà trường và pháp luật về bay UAV.</div>
+</section>
+
+<section class="alert">
+<h2><span class="tag t-alert">KHI CÓ CẢNH BÁO</span> Xử lý</h2>
+<ol class="steps">
+  <li><span class="bad">Đỏ + chuông</span> = <b>sự cố</b> (đánh nhau / người ngã / cháy-khói). Ảnh + mô tả cũng gửi về <b>Telegram</b>.
+    <span class="warn">Vàng cam</span> = <b>đang tụ tập đông người</b> (chỉ để theo dõi).</li>
+  <li>Bấm vào ảnh trong <b>Nhật ký cảnh báo</b> để xem ảnh lớn + <b>clip 5 giây trước → 5 giây sau</b>.</li>
+  <li>Giữ UAV <b>hover</b> tại chỗ để tiếp tục quan sát; báo người phụ trách (giám thị / bảo vệ) tới hiện trường.</li>
+  <li>Bấm <b class="k">✔ Đúng</b> hoặc <b class="k">✖ Báo nhầm</b> (trên màn hình hoặc ngay trong Telegram). Việc này giúp đo độ chính xác và cải thiện AI.</li>
+</ol>
+</section>
+
+<section class="end">
+<h2><span class="tag t-end">KẾT THÚC</span> Tắt hệ thống</h2>
+<ol class="steps">
+  <li><b class="k">Hạ cánh</b> UAV, tắt UAV.</li>
+  <li>Dừng phần mềm: bấm <kbd>q</kbd> trong cửa sổ video, hoặc <kbd>Ctrl</kbd>+<kbd>C</kbd> trong cửa sổ đen.</li>
+  <li>Tắt Aviateur / fpv4win, rút card thu.</li>
+  <li>Dữ liệu đã lưu trong <code>C:\UAV-Fire\outputs\</code>: <code>alerts\</code> (nhật ký, ảnh, clip, đánh giá) · <code>videos\</code> (video ghi).</li>
+</ol>
+</section>
+
+<h2>⚠ Sự cố thường gặp</h2>
+<table>
+  <tr><th style="width:38%">Hiện tượng</th><th>Cách xử lý</th></tr>
+  <tr><td>Cửa sổ đen báo <i>“Chua nhan duoc goi RTP”</i> lặp lại</td><td>Trong Aviateur: đã đánh dấu <b>Forward RTP</b>, <b>target port = 5600</b>, đã bấm <b>Start (F5)</b> chưa? UAV đã bật chưa? Card thu cắm chặt chưa?</td></tr>
+  <tr><td>Cửa sổ đen báo <i>“Khong mo duoc nguon video”</i> (fpv4win)</td><td>Bấm lại <b>Start Stream</b> trong fpv4win; tắt VLC.</td></tr>
+  <tr><td>Màn hình báo <span class="bad">MẤT TÍN HIỆU</span></td><td>Bay lại gần, chỉnh ăng-ten card thu. Phần mềm <b>tự kết nối lại</b>, không cần khởi động lại.</td></tr>
+  <tr><td>Trình duyệt không tự mở</td><td>Tự mở trình duyệt, gõ <code>http://localhost:8000</code>.</td></tr>
+  <tr><td>fps AI thấp (&lt; 15)</td><td>Cắm sạc laptop; đóng bớt chương trình khác.</td></tr>
+  <tr><td>Không nhận được Telegram</td><td>Laptop có Internet chưa? Nhắn <code>/trangthai</code> thử. Màn hình giám sát vẫn hoạt động khi không có mạng.</td></tr>
+  <tr><td>Cửa sổ đen đóng ngay / báo lỗi</td><td>Chụp lại thông báo lỗi. Chạy lại <code>setup_windows.bat</code> (bước cuối tự kiểm tra GPU, mô hình, thư viện).</td></tr>
+</table>
+
+<h2>Thử trước không cần UAV</h2>
+<p>Nhấp đúp <code>start_demo.bat</code> → phát video mẫu có cảnh đánh nhau, kiểm tra cảnh báo, âm thanh, Telegram.</p>
+
+<footer>Hướng dẫn chi tiết: <code>HUONG_DAN.md</code> trong cùng thư mục.</footer>
+</div>
+</body>
+</html>

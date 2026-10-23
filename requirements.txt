@@ -1,0 +1,11 @@
+# Linux / WSL. Windows: dung setup_windows.bat + requirements-windows.txt
+# Cai PyTorch truoc theo GPU (vd: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126)
+ultralytics==8.4.163          # >= 8.4 moi doc duoc YOLO26
+opencv-python>=4.10,!=4.13.0.90
+numpy>=2.0,<2.3
+dill==0.4.1                   # can cho trong so Fight-YOLOv8 small
+lap>=0.5.12
+requests>=2.31                # Telegram
+fastapi>=0.110                # web dashboard
+uvicorn>=0.29
+pyyaml

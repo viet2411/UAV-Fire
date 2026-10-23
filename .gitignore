@@ -1,0 +1,11 @@
+# bi mat - KHONG dua len
+config/telegram.json
+# video thu (quyen rieng tu) - chi giu videos/README.md
+videos/*
+!videos/README.md
+# moi truong / goi cai / ket qua chay
+venv/
+wheels/
+outputs/
+__pycache__/
+*.pyc
