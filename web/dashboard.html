@@ -48,7 +48,12 @@
   .video img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .badge { position: absolute; padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,.6);
     font-weight: 700; font-size: 12px; letter-spacing: .4px; }
-  .b-src { top: 10px; left: 10px; } .b-rec { top: 10px; right: 10px; color: #fecaca; display: none; }
+  .b-src { top: 10px; left: 10px; }
+  .b-journey { bottom: 10px; left: 10px; color: #bbf7d0; display: none; }
+  .b-journey::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
+    background: #22c55e; animation: blink 1.6s infinite; }
+  .b-journey.off { color: #fde68a; } .b-journey.off::before { background: #f59e0b; animation: none; }
+  .btn.jr.on { background: #14532d; border-color: #22c55e; } .b-rec { top: 10px; right: 10px; color: #fecaca; display: none; }
   .b-rec::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
     background: var(--bad); animation: blink 1s infinite; }
   .lost { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.55);
@@ -165,6 +170,7 @@
         <img id="video" alt="Video trực tiếp từ UAV">
         <div class="badge b-src" id="srcBadge">NGUỒN</div>
         <div class="badge b-rec" id="recBadge">ĐANG GHI</div>
+        <div class="badge b-journey" id="journeyBadge" title="Video hành trình tự động (outputs/videos/hanh_trinh_*.mp4)"></div>
         <div class="crowd-banner" id="crowdBanner">👥 <span id="crowdText"></span></div>
         <div class="lost" id="lost"><div>⚠ MẤT TÍN HIỆU UAV<small id="lostText">đang chờ kết nối lại…</small></div></div>
         <div class="alarm-flash" id="flash"></div>
@@ -172,6 +178,7 @@
       <div class="controls">
         <button class="btn rec" id="recBtn">● Ghi hình</button>
         <button class="btn" id="snapBtn">📷 Chụp ảnh</button>
+        <button class="btn jr" id="journeyBtn" title="Tự ghi video hành trình, chia file 10 phút">🎥 Hành trình</button>
         <div class="sep"></div>
         <label class="switch"><input type="checkbox" id="ovBoxes"><i></i>Khung</label>
         <label class="switch"><input type="checkbox" id="ovSkel"><i></i>Skeleton</label>
@@ -389,6 +396,10 @@ function initControls() {
   $("ovSkel").onchange = e => api("/api/config", { overlays: { skeleton: e.target.checked } });
   cfgInit = true;
 }
+$("journeyBtn").onclick = () => {
+  const j = S.status.journey;
+  api("/api/journey", { on: !(j && j.enabled) }).then(() => setTimeout(poll, 300));
+};
 $("recBtn").onclick = () => api("/api/record", { on: !S.status.recording }).then(() => setTimeout(poll, 300));
 $("snapBtn").onclick = async () => {
   const r = await api("/api/snapshot", {});
@@ -413,10 +424,18 @@ function renderStatus() {
   $("mLat").textContent = st.latency_ms ? st.latency_ms.toFixed(0) : "–";
   $("mUp").textContent = fmtDur(st.uptime_s);
   $("mGpu").textContent = st.gpu;
-  const src = st.source.startsWith("rtp://") ? "RTP · Aviateur" : st.source.startsWith("http") ? "HTTP · fpv4win" :
+  const src = st.source.startsWith("rtp://") ? "RTP · Aviateur" : st.source.startsWith("http") ? "HTTP" :
               st.mode === "file" ? "FILE · " + st.source.split(/[\\/]/).pop() : st.source;
   $("srcBadge").textContent = `${src} · ${st.src_fps} fps`;
   $("recBadge").style.display = st.recording ? "block" : "none";
+  const j = st.journey, jb = $("journeyBadge");
+  $("journeyBtn").classList.toggle("on", !!(j && j.enabled));
+  $("journeyBtn").textContent = j && j.enabled ? "🎥 Hành trình: BẬT" : "🎥 Hành trình: TẮT";
+  if (j && (j.on || j.stopped_reason)) {
+    jb.style.display = "block"; jb.classList.toggle("off", !j.on);
+    jb.textContent = j.on ? `HÀNH TRÌNH ${fmtDur(j.seconds)} · phần ${j.part}` :
+                     `HÀNH TRÌNH ĐÃ DỪNG: ${j.stopped_reason === "o dia sap day" ? "ổ đĩa sắp đầy" : j.stopped_reason}`;
+  } else jb.style.display = "none";
   $("recBtn").classList.toggle("on", st.recording);
   $("recBtn").textContent = st.recording ? "■ Dừng ghi" : "● Ghi hình";
   const all = Object.values(S.stats).reduce((a, s) => [a[0] + s.dung, a[1] + s.nham], [0, 0]);

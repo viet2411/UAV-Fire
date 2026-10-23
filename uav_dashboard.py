@@ -7,19 +7,20 @@ Cùng bộ AI với uav_pipeline.py (cháy/khói + người ngã + đánh nhau),
   * nhật ký cảnh báo có ảnh + clip 5 s trước / 5 s sau, nút "Đúng / Báo nhầm"
     (ghi outputs/alerts/feedback.csv -> đo precision ngoài thực địa, gom dữ liệu có nhãn)
   * ghi hình, chụp ảnh, bật/tắt khung - skeleton, chỉnh ngưỡng khi đang chạy
+  * tự ghi VIDEO HÀNH TRÌNH ngay khi có hình (--auto-record ai|goc|ca_hai), chia file 10 phút
   * đếm số người + theo dõi TỤ TẬP ĐÔNG NGƯỜI: là TRẠNG THÁI (banner, đếm thời gian, dải trên dòng thời gian),
     không phải sự cố -> không ghi nhật ký / ảnh / Telegram
 Mở trình duyệt:  http://localhost:8000   (máy khác trong LAN: http://<IP-máy-chủ>:8000)
 --------------------------------------------------------------------------------
 VÍ DỤ:
   python uav_dashboard.py --source rtp://@:5600 --fire-weights weights/best_dfire.pt      (Aviateur)
-  python uav_dashboard.py --source http://127.0.0.1:8080/stream.ts                         (fpv4win)
   python uav_dashboard.py --source 2.mp4 --loop                                            (demo bằng file)
 ================================================================================
 """
 import argparse
 import csv
 import os
+import shutil
 import signal
 import sys
 import threading
@@ -165,6 +166,93 @@ class ClipRecorder:
                 return
 
 
+# ----------------------------------------------------------------------------- journey video
+class JourneyRecorder:
+    """Tự ghi video hành trình bay.
+    * mode: "ai" (có khung AI), "goc" (hình gốc - dùng làm dữ liệu train lại), "ca_hai".
+    * Ghi theo ĐỒNG HỒ THẬT: AI chậm hơn nguồn thì lặp khung, nhanh hơn thì bỏ bớt -> thời lượng video = thời gian bay.
+    * Chia file mỗi `segment_min` phút (máy treo / mất điện chỉ mất đoạn cuối).
+    * Còn < `min_free_gb` GB trống thì dừng ghi."""
+
+    def __init__(self, out_dir, mode="ai", fps=25.0, segment_min=10.0, min_free_gb=2.0):
+        self.dir = Path(out_dir)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.mode, self.fps = mode, min(max(fps, 1.0), 30.0)
+        self.segment_s, self.min_free = segment_min * 60, min_free_gb * 1e9
+        self.enabled = True
+        self.session = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.writers, self.part, self.files = {}, 0, []
+        self.seg_start = self.next_t = None
+        self.total_s, self.stopped_reason = 0.0, None
+        self.last_disk_check = 0.0
+
+    def _open(self, size):
+        self.close()
+        self.part += 1
+        kinds = {"ai": ["ai"], "goc": ["goc"], "ca_hai": ["ai", "goc"]}[self.mode]
+        for k in kinds:
+            name = f"hanh_trinh_{self.session}_{self.part:02d}" + ("_goc" if k == "goc" else "") + ".mp4"
+            w = cv2.VideoWriter(str(self.dir / name), cv2.VideoWriter_fourcc(*"mp4v"), self.fps, size)
+            if w.isOpened():
+                self.writers[k] = w
+                self.files.append(name)
+        self.seg_start = time.time()
+        print(f"[HANH TRINH] Ghi -> {', '.join(self.files[-len(kinds):])}", flush=True)
+
+    def write(self, frame, canvas):
+        if not self.enabled:
+            return
+        now = time.time()
+        if now - self.last_disk_check > 30:
+            self.last_disk_check = now
+            if shutil.disk_usage(self.dir).free < self.min_free:
+                self.stopped_reason = "o dia sap day"
+                self.enabled = False
+                self.close()
+                print("[HANH TRINH] DUNG GHI: o dia con < 2 GB trong", flush=True)
+                return
+        if not self.writers or now - self.seg_start >= self.segment_s:
+            h, w = frame.shape[:2]
+            self._open((w, h))
+            self.next_t = now
+        n = 0                                   # số khung cần ghi để bám theo đồng hồ thật
+        while self.next_t <= now and n < 10:
+            n += 1
+            self.next_t += 1.0 / self.fps
+        if self.next_t < now:                   # tụt quá xa (vd mất tín hiệu) -> bắt kịp, không lặp vô hạn
+            self.next_t = now
+        for _ in range(n):
+            if "ai" in self.writers:
+                self.writers["ai"].write(canvas)
+            if "goc" in self.writers:
+                self.writers["goc"].write(frame)
+        self.total_s += n / self.fps
+
+    def pause(self):
+        """Mất tín hiệu: không ghi; khi có hình lại thì đi tiếp (không lặp khung cũ)."""
+        if self.next_t is not None:
+            self.next_t = time.time()
+
+    def set_enabled(self, on):
+        self.enabled = bool(on)
+        if not on:
+            self.close()
+        else:
+            self.stopped_reason = None
+
+    def close(self):
+        for w in self.writers.values():
+            w.release()
+        if self.writers:
+            print(f"[HANH TRINH] Da luu phan {self.part:02d}", flush=True)
+        self.writers = {}
+
+    def status(self):
+        return {"on": self.enabled and bool(self.writers), "enabled": self.enabled, "mode": self.mode,
+                "seconds": round(self.total_s), "part": self.part, "files": self.files[-4:],
+                "stopped_reason": self.stopped_reason}
+
+
 # ----------------------------------------------------------------------------- shared state
 class Dashboard:
     """Trạng thái dùng chung giữa vòng xử lý AI (luồng chính) và web server (luồng phụ)."""
@@ -192,6 +280,7 @@ class Dashboard:
         self.canvas, self.seq = None, 0
         self._jpeg, self._jpeg_seq = None, -1
         self.record_req = None        # True / False khi web bấm nút ghi hình
+        self.journey_req = None       # True / False khi web bật/tắt ghi hành trình
         self.snapshot_req = []        # danh sách Event chờ ảnh chụp
         self.feedback_path = OUT / "alerts" / "feedback.csv"
         self.notifier = None          # TelegramNotifier (nếu có config/telegram.json)
@@ -338,6 +427,11 @@ def build_app(dash):
         dash.record_req = bool(body.get("on"))
         return {"ok": True}
 
+    @app.post("/api/journey")
+    def journey(body: dict):
+        dash.journey_req = bool(body.get("on"))
+        return {"ok": True}
+
     @app.post("/api/snapshot")
     def snapshot():
         ev = threading.Event()
@@ -407,6 +501,9 @@ def main():
     ap.add_argument("--crowd-min", type=int, default=5, help="trang thai tu tap khi nhom >= N nguoi")
     ap.add_argument("--no-skeleton", action="store_true")
     ap.add_argument("--view", action="store_true", help="mo them cua so video tren may chu (nhu run_live.bat); q de dung")
+    ap.add_argument("--auto-record", choices=["ai", "goc", "ca_hai"], default=None,
+                    help="tu ghi video hanh trinh tu luc co hinh: ai = co khung AI, goc = hinh goc, ca_hai")
+    ap.add_argument("--segment-min", type=float, default=10.0, help="do dai moi file hanh trinh (phut)")
     ap.add_argument("--loop", action="store_true", help="file video: phat lai lien tuc (demo)")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8000)
@@ -427,7 +524,7 @@ def main():
     tg_cfg = load_config(args.telegram_config)
     if tg_cfg:
         src = str(args.source)
-        label = ("RTP · Aviateur" if src.startswith("rtp://") else "HTTP · fpv4win" if src.startswith("http") else
+        label = ("RTP · Aviateur" if src.startswith("rtp://") else "HTTP" if src.startswith("http") else
                  f"File {Path(src).name}" if is_file else src)
         dash.notifier = TelegramNotifier(tg_cfg, dash, source_label=label)
         print(f"[TELEGRAM] Bat - gui toi {len(dash.notifier.chats)} chat", flush=True)
@@ -456,6 +553,11 @@ def main():
             os._exit(0)
         src_fps = sane_fps(reader.cap.get(cv2.CAP_PROP_FPS), args.fps)
     dash.status["src_fps"] = round(src_fps, 1)
+    journey = (JourneyRecorder(OUT / "videos", args.auto_record, fps=src_fps, segment_min=args.segment_min)
+               if args.auto_record else None)
+    if journey:
+        print(f"[HANH TRINH] Tu ghi video hanh trinh ({args.auto_record}), moi file {args.segment_min:g} phut "
+              f"-> {OUT / 'videos'}", flush=True)
     print(f"[{now_str()}] Bat dau giam sat: {args.source} ({'file' if is_file else 'truc tiep'}, {src_fps:.1f} fps)",
           flush=True)
 
@@ -491,6 +593,13 @@ def main():
                         break
                     dash.status.update(connected=False, lost_s=round(time.time() - t_frame, 1),
                                        uptime_s=int(time.time() - t0))
+                    if journey:
+                        journey.pause()
+                        if dash.journey_req is not None:          # bấm bật/tắt lúc đang mất tín hiệu
+                            journey.set_enabled(dash.journey_req)
+                            print(f"[HANH TRINH] {'Bat' if dash.journey_req else 'Tat'} ghi hanh trinh", flush=True)
+                            dash.journey_req = None
+                        dash.status["journey"] = journey.status()
                     if args.view:
                         if dash.canvas is not None and time.time() - t_frame >= 1.0:
                             v = dash.canvas.copy()
@@ -549,6 +658,14 @@ def main():
                     print(f"[REC] Da luu {rec_path}", flush=True)
             if writer is not None:
                 writer.write(canvas)
+            if dash.journey_req is not None:
+                if journey is None:     # chưa bật lúc khởi động -> tạo khi bấm nút
+                    journey = JourneyRecorder(OUT / "videos", "ai", fps=src_fps, segment_min=args.segment_min)
+                journey.set_enabled(dash.journey_req)
+                print(f"[HANH TRINH] {'Bat' if dash.journey_req else 'Tat'} ghi hanh trinh", flush=True)
+                dash.journey_req = None
+            if journey:
+                journey.write(frame, canvas)
             while dash.snapshot_req:
                 ev, holder = dash.snapshot_req.pop(0)
                 p = OUT / "snapshots" / f"chup_{datetime.now():%Y%m%d_%H%M%S_%f}.jpg"
@@ -564,6 +681,7 @@ def main():
                 dash.status.update(connected=True, lost_s=0.0, ai_fps=round(ai_fps, 1),
                                    latency_ms=round(1000 * proc[-1], 0), frames=dash.status["frames"] + 1,
                                    uptime_s=int(time.time() - t0), recording=writer is not None,
+                                   journey=journey.status() if journey else None,
                                    video_t=round(time.time() - t_file0, 1) if is_file else None,
                                    people=crowd.total if cfg["modules"]["crowd"] else len(fall.people),
                                    largest_group=crowd.largest,
@@ -588,6 +706,8 @@ def main():
         if writer is not None:
             writer.release()
             print(f"[REC] Da luu {rec_path}", flush=True)
+        if journey:
+            journey.close()
         clips.flush()
         cv2.destroyAllWindows()
         print(f"[{now_str()}] Ket thuc.", flush=True)

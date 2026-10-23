@@ -4,7 +4,7 @@ Giám sát an toàn trường học bằng UAV: phát hiện **đánh nhau**, **
 đếm người và theo dõi **tụ tập đông người**. Màn hình giám sát chạy trên trình duyệt, cảnh báo về **Telegram**.
 
 ```
-UAV (OpenIPC) ─WFB─> card RTL8812AU ─> Aviateur / fpv4win ─RTP/HTTP─> uav_dashboard.py (GPU) ─> trình duyệt + Telegram
+UAV (OpenIPC) ─WFB─> card RTL8812AU ─> Aviateur ─RTP─> uav_dashboard.py (GPU) ─> trình duyệt + Telegram
 ```
 
 ## 1. Cài đặt (làm 1 lần)
@@ -27,14 +27,14 @@ Nhấp đúp **`start_demo.bat`** → cửa sổ video + trình duyệt tự m�
 
 ## 3. Chạy với UAV
 Nhấp đúp **`start.bat`** (mặc định nguồn Aviateur `rtp://@:5600`) → mở **cửa sổ video** trên máy này (nhấn **q** để dừng)
-và **màn hình giám sát web** (trình duyệt tự mở). Nguồn khác: truyền làm tham số, ví dụ `start.bat http://127.0.0.1:8080/stream.ts`,
-`start.bat 0`. Cài đặt (ngưỡng đám đông, cổng, tắt cửa sổ video `set VIEW=`, tắt cháy/khói) sửa ở đầu file bằng Notepad.
+và **màn hình giám sát web** (trình duyệt tự mở). Nguồn khác: truyền làm tham số, ví dụ `start.bat 0` (card thu USB).
+**Video hành trình** tự ghi ngay khi có hình (`set JOURNEY=--auto-record ai` trong `start.bat`; `goc` = hình gốc để làm dữ liệu
+train lại AI, `ca_hai` = cả hai, để trống = tắt). Bật/tắt khi đang chạy bằng nút **🎥 Hành trình**. Còn < 2 GB trống thì tự dừng ghi. Cài đặt (ngưỡng đám đông, cổng, tắt cửa sổ video `set VIEW=`, tắt cháy/khói) sửa ở đầu file bằng Notepad.
 Chưa chạy `setup_windows.bat` thì `start.bat` thử dùng Python có sẵn của máy (cần đủ thư viện).
 
 | Phần mềm thu | Nguồn (`SRC` trong start.bat / tham số) | Ghi chú |
 |---|---|---|
 | **Aviateur** (OpenIPC, ≥ v0.3.3) | `rtp://@:5600` (mặc định) | Chọn card → đánh dấu **Forward RTP** → **target port** `5600` → **Start (F5)**. Khi chuyển tiếp, Aviateur **không tự hiện hình** (chỉ chuyển tiếp, không giải mã). Card cần driver **libusb** (`tools\zadig-2.8.exe`) + Microsoft Visual C++ Redistributable (`tools\vcredist_x64.exe`). Tự nhận H.264 / H.265. **Cổng 5601 cũng phải trống** (FFmpeg dùng cho RTCP) |
-| **fpv4win** (bản có Stream Server) | `http://127.0.0.1:8080/stream.ts` | Bật **Start Stream** trong fpv4win; **tắt VLC** (server chỉ cho 1 người xem). Bản `0.0.5-beta` không có Stream Server |
 | Card thu USB / webcam | `0` | |
 
 - Nên đặt **GOP (khoảng keyframe) của camera OpenIPC ~1 s**: GOP dài → chờ lâu mới có hình và mỗi lần nối lại chậm.
@@ -74,6 +74,7 @@ Chỉ các chat có trong `chat_ids` mới nhận cảnh báo / bấm nút đư�
 | `outputs\alerts\alert_log.csv` | Nhật ký sự cố (thời gian, loại, độ tin cậy, ảnh) |
 | `outputs\alerts\snapshots\` · `clips\` | Ảnh và clip từng sự cố |
 | `outputs\alerts\feedback.csv` | Đánh giá Đúng / Báo nhầm |
+| `outputs\videos\hanh_trinh_*.mp4` | **Video hành trình** tự ghi từ lúc có hình (chia file 10 phút; `_goc` = hình gốc không có khung AI) |
 | `outputs\videos\rec_*.mp4` · `outputs\snapshots\` | Video ghi và ảnh chụp bằng nút trên màn hình |
 
 ## 7. Cách chạy khác
@@ -93,7 +94,6 @@ Chỉ các chat có trong `chat_ids` mới nhận cảnh báo / bấm nút đư�
 | `CUDA: False` | Cập nhật driver NVIDIA (≥ 570); chạy lại `setup_windows.bat` |
 | Trình duyệt mở nhưng chưa có hình | Chờ nạp mô hình (~10 s); xem cửa sổ đen có báo "cho nguon video" không |
 | `Chua nhan duoc goi RTP ... cong 5600` lặp lại | Aviateur chưa bật chuyển tiếp, sai cổng, hoặc chương trình khác chiếm cổng 5600/5601 |
-| `Không mở được nguồn video` (fpv4win) | Bật lại **Start Stream** trong fpv4win (tự tắt khi người xem ngắt); tắt VLC |
 | Điện thoại không mở được trang | Cùng mạng WiFi? Cho phép Python qua Windows Firewall; dùng IP in ra ở dòng `[WEB]` |
 | Không nhận Telegram | `check_env.py` → dòng Telegram; máy có Internet?; chat id đã thêm vào `chat_ids` chưa |
 | Cửa sổ `.bat` đóng ngay | Mở `cmd`, `cd C:\UAV-Fire`, chạy file `.bat` để đọc lỗi |

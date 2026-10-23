@@ -7,7 +7,7 @@ REM
 REM   1. Mo Aviateur: chon card thu, danh dau "Forward RTP", target port = 5600, bam Start (F5)
 REM      (khi Forward RTP bat, Aviateur khong tu hien hinh - hinh hien o phan mem nay)
 REM   2. Nhap dup file nay.
-REM Nguon khac:  start.bat http://127.0.0.1:8080/stream.ts  (fpv4win)  |  start.bat 0  (card thu USB)
+REM Nguon khac:  start.bat 0  (card thu USB)
 REM ======================================================================
 cd /d "%~dp0"
 set PYTHONUTF8=1
@@ -30,6 +30,10 @@ REM Telegram: dien token + chat id vao config\telegram.json (xem HUONG_DAN.md)
 REM --- tuy chon: tat cua so video tren may nay (chi dung web) -> doi thanh: set VIEW=
 set VIEW=--view
 
+REM --- tu dong ghi VIDEO HANH TRINH tu luc co hinh (outputs\videos\hanh_trinh_*.mp4, chia file 10 phut)
+REM     ai = co khung AI  |  goc = hinh goc (du lieu de train lai AI)  |  ca_hai  |  tat: doi thanh  set JOURNEY=
+set JOURNEY=--auto-record ai
+
 REM --- Python: venv (setup_windows.bat) neu co, khong thi dung Python cua may ---
 set PY=venv\Scripts\python.exe
 if not exist "%PY%" (
@@ -39,5 +43,5 @@ if not exist "%PY%" (
 
 %PY% -c "import cv2, ultralytics, fastapi" >nul 2>&1 || (echo [LOI] Python "%PY%" chua co thu vien can thiet - chay setup_windows.bat truoc. & pause & exit /b 1)
 if "%OPEN_BROWSER%"=="1" start "" /b cmd /c "timeout /t 8 /nobreak >nul & start http://localhost:%PORT%"
-%PY% uav_dashboard.py --source "%SRC%" --crowd-min %CROWD_MIN% --port %PORT% %FIRE% %VIEW%
+%PY% uav_dashboard.py --source "%SRC%" --crowd-min %CROWD_MIN% --port %PORT% %FIRE% %VIEW% %JOURNEY%
 pause

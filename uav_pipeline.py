@@ -277,7 +277,7 @@ class LatestFrameReader:
 
     def __init__(self, src):
         self.src = src
-        while True:   # nguon chua san sang (vd chua bat stream server trong fpv4win) -> cho
+        while True:   # nguon chua san sang (vd Aviateur chua bat Forward RTP) -> cho
             try:
                 self.cap = open_source(src)
                 break

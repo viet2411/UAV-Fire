@@ -5,7 +5,7 @@ Hệ thống AI giám sát an toàn trường học bằng UAV (drone): nhận h
 giám sát web** và **cảnh báo qua Telegram**. Dự án nghiên cứu khoa học kỹ thuật của học sinh THPT.
 
 ```
-UAV (OpenIPC) ──WFB──> card RTL8812AU ──> Aviateur / fpv4win ──RTP / HTTP──> uav_dashboard.py (GPU)
+UAV (OpenIPC) ──WFB──> card RTL8812AU ──> Aviateur ──RTP──> uav_dashboard.py (GPU)
                                                                      ├─> màn hình giám sát (trình duyệt, điện thoại)
                                                                      └─> Telegram (ảnh + clip + nút Đúng / Báo nhầm)
 ```
@@ -20,9 +20,9 @@ UAV (OpenIPC) ──WFB──> card RTL8812AU ──> Aviateur / fpv4win ──R
 
 - **Màn hình giám sát web**: video có khung + skeleton, trạng thái kết nối UAV, 4 thẻ module, nhật ký cảnh báo có ảnh
   và clip 5 s trước → 5 s sau, nút **Đúng / Báo nhầm** (đo độ chính xác ngoài thực tế), ghi hình, chụp ảnh, chỉnh ngưỡng.
+- **Video hành trình**: tự ghi suốt buổi bay từ lúc có hình (có khung AI và/hoặc hình gốc), chia file 10 phút, dừng khi ổ gần đầy.
 - **Telegram**: ảnh + mô tả tiếng Việt + nút Đúng / Báo nhầm (đồng bộ với màn hình), clip, lệnh `/trangthai`, `/anh`.
-- **Nguồn video**: RTP từ Aviateur (`rtp://@:5600`, tự nhận H.264 / H.265), HTTP MPEG-TS từ fpv4win,
-  card thu USB / webcam, file video. Tự kết nối lại khi mất sóng.
+- **Nguồn video**: RTP từ Aviateur (`rtp://@:5600`, tự nhận H.264 / H.265), card thu USB / webcam, file video. Tự kết nối lại khi mất sóng.
 - Tốc độ (RTX 4060 Ti, 720p): pose + đánh nhau + cháy ~50 fps.
 
 ## Chạy trên Windows
@@ -33,7 +33,7 @@ Yêu cầu: Windows 10/11, GPU NVIDIA (driver ≥ 570 cho PyTorch CUDA 12.8).
 3. **Chạy thử không cần UAV**: đặt một video `.mp4` vào `videos\` (repo không kèm video), nhấp đúp **`start_demo.bat`**
    (hoặc `start_demo.bat videos\ten_video.mp4`). Trình duyệt mở **http://localhost:8000**.
 4. **Chạy với UAV**: Aviateur → chọn card thu → đánh dấu **Forward RTP**, *target port* `5600` → **Start (F5)** → nhấp đúp
-   **`start.bat`**. Dùng fpv4win (bản có Stream Server) → **`start_fpv4win.bat`**.
+   **`start.bat`**.
    Card thu RTL8812AU cần driver **libusb**: chạy `tools\zadig-2.8.exe` → *Options → List All Devices* → chọn card → libusb → Install
    (Aviateur cũng cần `tools\vcredist_x64.exe`).
 5. (Tuỳ chọn) **Telegram**: chép `config\telegram.example.json` thành `config\telegram.json`, điền token bot
@@ -57,7 +57,6 @@ Mã nghiên cứu (train / đánh giá mô hình, đo skeleton theo độ cao) k
 ```
 UAV-Fire/
 ├── start.bat              chạy với UAV qua Aviateur (cửa sổ video + màn hình giám sát web)
-├── start_fpv4win.bat      chạy với UAV qua fpv4win
 ├── start_demo.bat         chạy thử bằng video trong videos\
 ├── run_live.bat / run_file.bat   bản dự phòng: chỉ cửa sổ OpenCV, không có web
 ├── setup_windows.bat      cài đặt (1 lần) · tai_goi_offline.bat: tải sẵn thư viện để cài không cần mạng
@@ -70,7 +69,7 @@ UAV-Fire/
 ├── weights/               best_dfire.pt (cháy/khói, nhóm tự train) · yolo26n-pose.pt (người + skeleton)
 ├── third_party/           Fight-Violence-detection-yolov8: phát hiện đánh nhau
 ├── videos/                đặt video thử vào đây (repo không kèm video)
-├── tools/                 fpv4win\ (phần mềm thu hình) · zadig-2.8.exe (driver card thu) · vcredist_x64.exe
+├── tools/                 zadig-2.8.exe (driver card thu) · vcredist_x64.exe (Aviateur cần)
 ├── HUONG_DAN_NHANH.html   hướng dẫn từng bước cho người bay (in được A4) · HUONG_DAN.md: hướng dẫn đầy đủ
 └── requirements-windows.txt / requirements.txt
 ```
@@ -95,8 +94,7 @@ chỉ chat Telegram được cấp quyền mới nhận ảnh, không dùng nh�
 - [Fight-Violence-detection-yolov8](https://github.com/Musawer1214/Fight-Violence-detection-yolov8) — MIT.
 - [mmaction2](https://github.com/open-mmlab/mmaction2) ST-GCN++ (thử nghiệm) — Apache-2.0.
 - Dataset: [D-Fire](https://github.com/gaia-solutions-on-demand/DFireDataset), VisDrone, Okutama-Action (không kèm trong repo).
-- Phần mềm đi kèm trong `tools/`: [fpv4win](https://github.com/OpenIPC/fpv4win) 0.0.5-beta (OpenIPC; bản này chưa có
-  Stream Server), [Zadig](https://zadig.akeo.ie/) 2.8, Microsoft Visual C++ Redistributable — theo giấy phép của từng tác giả. Nên dùng bản mới nhất từ trang chính thức;
+- Phần mềm đi kèm trong `tools/`: [Zadig](https://zadig.akeo.ie/) 2.8, Microsoft Visual C++ Redistributable — theo giấy phép của từng tác giả. Nên dùng bản mới nhất từ trang chính thức;
   [Aviateur](https://github.com/OpenIPC/aviateur/releases) tải riêng.
 
 Mã nguồn được phát triển với sự hỗ trợ của công cụ AI; nhóm tác giả chịu trách nhiệm kiểm chứng và điều chỉnh.

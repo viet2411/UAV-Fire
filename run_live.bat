@@ -3,7 +3,7 @@ REM Chay voi luong truc tiep tu Aviateur (OpenIPC): video RTP chuyen tiep ra con
 REM   1. Mo Aviateur: chon card thu, danh dau "Forward RTP", target port = 5600, bam Start (F5)
 REM      (khi Forward RTP bat, Aviateur khong tu hien hinh - hinh hien o phan mem nay)
 REM   2. Chay file nay.   Nhan q trong cua so video hoac Ctrl+C de dung.
-REM Nguon khac:  run_live.bat http://127.0.0.1:8080/stream.ts  (fpv4win)  |  run_live.bat 0  (card thu USB)
+REM Nguon khac:  run_live.bat 0  (card thu USB)
 cd /d "%~dp0"
 set PYTHONUTF8=1
 REM giam bo dem cua FFmpeg de do tre thap

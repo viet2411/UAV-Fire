@@ -67,7 +67,7 @@
   <li>Pin UAV, pin tay điều khiển đã sạc đầy (mang pin dự phòng)</li>
   <li>Laptop đã sạc, <b class="k">cắm sạc</b> khi chạy (AI dùng GPU, tốn pin)</li>
   <li>Card thu WiFi <b class="k">RTL8812AU</b> + ăng-ten</li>
-  <li>Đã có phần mềm thu hình: <b class="k">Aviateur</b> (≥ v0.3.3) hoặc <b class="k">fpv4win</b></li>
+  <li>Đã cài phần mềm thu hình <b class="k">Aviateur</b> (≥ v0.3.3) và <code>tools\vcredist_x64.exe</code></li>
   <li>(Làm 1 lần) Card thu đã cài driver <b class="k">libusb</b> bằng Zadig (<code>tools\zadig-2.8.exe</code>): <i>Options → List All Devices</i> → chọn card → <b>libusb</b> → Install</li>
   <li>Đã xin phép nhà trường; chọn giờ / khu vực bay an toàn</li>
   <li>Muốn nhận cảnh báo Telegram: laptop cần có Internet (WiFi / 4G)</li>
@@ -80,17 +80,9 @@
 <ol class="steps">
   <li><b class="k">Cắm card thu RTL8812AU</b> vào cổng USB của laptop, gắn ăng-ten.</li>
   <li><b class="k">Bật UAV</b>, đặt trên mặt phẳng, cách người ≥ 5 m. Chờ ~30 giây cho camera khởi động.</li>
-  <li><b class="k">Mở phần mềm thu hình</b> và cho nó gửi hình sang phần mềm AI:
-    <div class="choice">
-      <div><h4>Dùng Aviateur</h4>Chọn card thu → đánh dấu ô <b>Forward RTP</b> → ô <b>target port</b> nhập <code>5600</code>
-        → bấm <b>Start (F5)</b>.<br><span class="warn">Khi Forward RTP bật, Aviateur không tự hiện hình</span> — hình sẽ hiện ở phần mềm AI (bước 5).</div>
-      <div><h4>Dùng fpv4win</h4>Chờ có hình → bấm <b>Start Stream</b>. <b>Tắt VLC</b> nếu đang mở.</div>
-    </div></li>
-  <li><b class="k">Nhấp đúp</b> trong <code>C:\UAV-Fire</code>:
-    <div class="choice">
-      <div><h4>Aviateur</h4><code>start.bat</code></div>
-      <div><h4>fpv4win</h4><code>start_fpv4win.bat</code></div>
-    </div>
+  <li><b class="k">Mở Aviateur</b>: chọn card thu → đánh dấu ô <b>Forward RTP</b> → ô <b>target port</b> nhập <code>5600</code>
+    → bấm <b>Start (F5)</b>.<br><span class="warn">Khi Forward RTP bật, Aviateur không tự hiện hình</span> — hình sẽ hiện ở phần mềm AI (bước 5).</li>
+  <li><b class="k">Nhấp đúp <code>start.bat</code></b> trong <code>C:\UAV-Fire</code>.
     Một cửa sổ đen hiện ra (<b>không tắt</b> cửa sổ này). Chờ ~10 giây.</li>
   <li>Tự mở <b class="k">cửa sổ video</b> + <b class="k">trình duyệt</b> (màn hình giám sát <code>http://localhost:8000</code>).
     Kiểm tra thanh trên cùng: <span class="ok">● UAV ĐÃ KẾT NỐI</span> và <b>fps AI ≥ 20</b>.</li>
@@ -129,8 +121,8 @@
 <ol class="steps">
   <li><b class="k">Hạ cánh</b> UAV, tắt UAV.</li>
   <li>Dừng phần mềm: bấm <kbd>q</kbd> trong cửa sổ video, hoặc <kbd>Ctrl</kbd>+<kbd>C</kbd> trong cửa sổ đen.</li>
-  <li>Tắt Aviateur / fpv4win, rút card thu.</li>
-  <li>Dữ liệu đã lưu trong <code>C:\UAV-Fire\outputs\</code>: <code>alerts\</code> (nhật ký, ảnh, clip, đánh giá) · <code>videos\</code> (video ghi).</li>
+  <li>Tắt Aviateur, rút card thu.</li>
+  <li>Dữ liệu đã lưu trong <code>C:\UAV-Fire\outputs\</code>: <code>alerts\</code> (nhật ký, ảnh, clip, đánh giá) · <code>videos\</code> (<b>video hành trình</b> <code>hanh_trinh_*.mp4</code> tự ghi suốt buổi bay, chia file 10 phút).</li>
 </ol>
 </section>
 
@@ -138,7 +130,6 @@
 <table>
   <tr><th style="width:38%">Hiện tượng</th><th>Cách xử lý</th></tr>
   <tr><td>Cửa sổ đen báo <i>“Chua nhan duoc goi RTP”</i> lặp lại</td><td>Trong Aviateur: đã đánh dấu <b>Forward RTP</b>, <b>target port = 5600</b>, đã bấm <b>Start (F5)</b> chưa? UAV đã bật chưa? Card thu cắm chặt chưa?</td></tr>
-  <tr><td>Cửa sổ đen báo <i>“Khong mo duoc nguon video”</i> (fpv4win)</td><td>Bấm lại <b>Start Stream</b> trong fpv4win; tắt VLC.</td></tr>
   <tr><td>Màn hình báo <span class="bad">MẤT TÍN HIỆU</span></td><td>Bay lại gần, chỉnh ăng-ten card thu. Phần mềm <b>tự kết nối lại</b>, không cần khởi động lại.</td></tr>
   <tr><td>Trình duyệt không tự mở</td><td>Tự mở trình duyệt, gõ <code>http://localhost:8000</code>.</td></tr>
   <tr><td>fps AI thấp (&lt; 15)</td><td>Cắm sạc laptop; đóng bớt chương trình khác.</td></tr>
